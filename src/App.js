@@ -57,7 +57,7 @@ export default class App extends EventEmitter {
     initScene() {
         this.scene = new Scene()
 
-        const ambientLight = new AmbientLight(0xffffff, 0.5)
+        const ambientLight = new AmbientLight(0xffffff, 0.1)
         this.scene.add(ambientLight)
 
         const directionalLight = new DirectionalLight(0xffffff, 1)

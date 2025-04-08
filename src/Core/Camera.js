@@ -18,7 +18,7 @@ export default class Camera extends EventEmitter {
     }
 
     init() {
-        this.perspective = new PerspectiveCamera(90, this.app.canvasSize.aspect, 0.1, 100)
+        this.perspective = new PerspectiveCamera(60, this.app.canvasSize.aspect, 0.1, 100)
         this.perspective.position.set(0, 0, 5)
 
         this.controls = new OrbitControls(this.perspective, this.app.canvas)
