@@ -66,9 +66,11 @@ export default class App extends EventEmitter {
         this.scene.add(directionalLight)
 
         const theatre = this.assetManager.getItem('Theatre')
-        if (theatre && theatre.scene) {
-            this.scene.add(theatre.scene)
-        }
+        const oldPiano = this.assetManager.getItem('Old piano')
+
+        oldPiano.scene.position.set(-10, 1, 0)
+        this.scene.add(oldPiano.scene)
+        this.scene.add(theatre.scene)
     }
 
     assetsLoadCompleteHandler() {

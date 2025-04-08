@@ -11,6 +11,9 @@ importers:
       gsap:
         specifier: ^3.12.7
         version: 3.12.7
+      howler:
+        specifier: ^2.2.4
+        version: 2.2.4
       lil-gui:
         specifier: ^0.20.0
         version: 0.20.0
@@ -301,6 +304,9 @@ packages:
   gsap@3.12.7:
     resolution: {integrity: sha512-V4GsyVamhmKefvcAKaoy0h6si0xX7ogwBoBSs2CTJwt7luW0oZzC0LhdkyuKV8PJAXr7Yaj8pMjCKD4GJ+eEMg==}
 
+  howler@2.2.4:
+    resolution: {integrity: sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w==}
+
   is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
@@ -568,6 +574,8 @@ snapshots:
     optional: true
 
   gsap@3.12.7: {}
+
+  howler@2.2.4: {}
 
   is-number@7.0.0: {}
 
