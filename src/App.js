@@ -2,8 +2,14 @@ import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
 import Cube from "./world/Cube"
 import { OrbitControls } from "three/examples/jsm/Addons.js"
 
+let appInstance = null
 export default class App  {
     constructor(canvas) {
+        if (appInstance) {
+            return appInstance
+        }
+        appInstance = this
+
         this.canvas = canvas
         this.scene = null
         this.camera = null
@@ -22,7 +28,7 @@ export default class App  {
 
         const aspect = this.canvas.clientWidth / this.canvas.clientHeight
         this.camera = new PerspectiveCamera(90, aspect, 0.1, 1000)
-        this.camera.position.set(0, 0, 5)
+        this.camera.position.set(0, 0, 10)
         this.controls = new OrbitControls(this.camera, this.canvas)
 
         this.renderer = new WebGLRenderer({
