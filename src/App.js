@@ -6,13 +6,9 @@ export default class App  {
     constructor(canvas) {
         this.canvas = canvas
         this.scene = null
-
         this.camera = null
-
         this.renderer = null
-
         this.cube = null
-
         this.controls = null
 
         this.animateBound = this.animate.bind(this)
@@ -26,6 +22,7 @@ export default class App  {
 
         const aspect = this.canvas.clientWidth / this.canvas.clientHeight
         this.camera = new PerspectiveCamera(90, aspect, 0.1, 1000)
+        this.camera.position.set(0, 0, 5)
         this.controls = new OrbitControls(this.camera, this.canvas)
 
         this.renderer = new WebGLRenderer({
@@ -37,7 +34,6 @@ export default class App  {
         this.renderer.setPixelRatio(1)
 
         this.cube = new Cube()
-        this.cube.instance.position.set(0,0, -5)
 
         this.scene.add(this.cube.instance)
     }
@@ -59,7 +55,6 @@ export default class App  {
         this.cube = null
 
         this.animateBound = null
-
         this.canvas = null
     }
 }
