@@ -62,5 +62,7 @@ export default class App  {
 
         this.animateBound = null
         this.canvas = null
+
+        appInstance = null
     }
 }
