@@ -1,4 +1,4 @@
-import { PerspectiveCamera, Scene, WebGLRenderer } from "three"
+import { PerspectiveCamera, Scene, WebGLRenderer, AmbientLight, DirectionalLight } from "three"
 import Cube from "./World/Cube"
 import { OrbitControls } from "three/examples/jsm/Addons.js"
 import EventEmitter from "./Utils/EventEmitter"
@@ -7,6 +7,7 @@ import Camera from "./Core/Camera"
 import Renderer from "./Core/Renderer"
 import { AnimationLoop } from "./Core/AnimationLoop"
 import { AssetManager } from "./Assets/AssetManager"
+import {Howl, Howler} from 'howler';
 
 let myAppInstance = null
 
@@ -56,9 +57,18 @@ export default class App extends EventEmitter {
     initScene() {
         this.scene = new Scene()
 
-        this.cube = new Cube()
+        const ambientLight = new AmbientLight(0xffffff, 0.5)
+        this.scene.add(ambientLight)
 
-        this.scene.add(this.cube.instance)
+        const directionalLight = new DirectionalLight(0xffffff, 1)
+        directionalLight.position.set(5, 5, 5)
+        directionalLight.castShadow = true
+        this.scene.add(directionalLight)
+
+        const theatre = this.assetManager.getItem('Theatre')
+        if (theatre && theatre.scene) {
+            this.scene.add(theatre.scene)
+        }
     }
 
     assetsLoadCompleteHandler() {
