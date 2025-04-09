@@ -7,8 +7,30 @@
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <div class="loading-bar"></div>
-    <canvas class="webgl"></canvas>
-    <script type="module" src="./script.js"></script>
+<!-- Loading screen -->
+<div class="loading-screen">
+    <div class="loading-text">Chargement des ressources</div>
+    <div class="loading-progress">
+        <div class="loading-bar-container">
+            <div class="loading-bar"></div>
+        </div>
+    </div>
+    <div class="loading-percentage">0%</div>
+</div>
+
+<!-- Entrance overlay with button -->
+<div id="entrance-overlay" style="display: none;">
+    <button id="enter-button">Entrer en scène</button>
+</div>
+
+<!-- Action button that appears when pressing "o" -->
+<div id="action-button-container">
+    <button id="action-button">Fin de la scène</button>
+</div>
+
+<!-- Canvas for 3D -->
+<canvas class="webgl"></canvas>
+
+<script type="module" src="./script.js"></script>
 </body>
 </html>

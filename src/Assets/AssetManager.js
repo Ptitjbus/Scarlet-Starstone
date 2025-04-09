@@ -21,15 +21,19 @@ export class AssetManager extends EventEmitter {
         super()
 
         this.app = new App()
-        
+
         this.assets = assets
-        
+
         this.loaders = null
         this.items = null
         this.loadingCount = assets.length
         this.loadedCount = 0
 
         this.loadingComplete = false
+        this.loadingScreen = null
+        this.loadingBar = null
+        this.loadingPercentage = null
+        this.entranceOverlay = null
 
         this.init()
     }
@@ -37,94 +41,147 @@ export class AssetManager extends EventEmitter {
     init() {
         this.items = {}
 
-        this.initProgressBar()
+        this.initLoaders()
+        this.initLoadingScreen()
 
-        this.loaders = {}
-        
-        this.loaders.texture = new THREE.TextureLoader(this.loadingManager)
-        
-        this.loaders.exr = new EXRLoader(this.loadingManager)
-        this.loaders.hdr = new RGBELoader(this.loadingManager)
-
-        this.loaders.fbx = new FBXLoader(this.loadingManager)
-        this.loaders.gltf = new GLTFLoader(this.loadingManager)
-        
         const dracoLoader = new DRACOLoader()
         dracoLoader.setDecoderPath('./lib/draco/');
         this.loaders.gltf.setDRACOLoader(dracoLoader);
     }
 
-    initProgressBar() {
-        const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1)
-        const overlayMaterial = new THREE.ShaderMaterial({
-            transparent: true,
-            vertexShader: `
-                void main() {
-                    gl_Position = vec4(position, 1.);
-                }
-            `,
-                
-            fragmentShader: `
-                uniform float uAlpha;
-                void main() {
-                    gl_FragColor = vec4(0., 0., 0., uAlpha);
-                }
-            `,
-            uniforms: {
-                uAlpha : new THREE.Uniform(0)
-            }
-        })
-        
-        this.loadingOverlayMesh = new THREE.Mesh(overlayGeometry, overlayMaterial)
-        this.loadingOverlayMesh.name = 'LoadingOverlay'
-        this.loadingOverlayMesh.material.uniforms.uAlpha.value = 1.0
-        
-        this.loadingBarElement = document.querySelector('.loading-bar')
-        this.loadingBarElement.style.opacity = 1
-                
+    initLoaders() {
+        this.loaders = {}
+
         this.loadingManager = new THREE.LoadingManager(
-            // Loaded
+            // Loaded callback - everything is loaded
             () => {
                 this.loadingComplete = true
+                console.log('Loading complete!')
 
-                this.trigger('ready')
+                // Update loading screen to 100%
+                if (this.loadingBar && this.loadingPercentage) {
+                    this.loadingBar.style.transform = 'scaleX(1)'
+                    this.loadingPercentage.textContent = '100%'
+                }
 
-                // Match 500ms 
-                gsap.delayedCall(0.5, () => {
-                    console.log(`AssetManager :: assets load complete`)
-    
-                    if (this.loadingBarElement !== null) {
-                        this.loadingBarElement.classList.add('ended')
-                        this.loadingBarElement.style.transform = ''
-                    }
-                    
-                    const tl = gsap.timeline({
-                        onComplete : () => {        
-                            this.app.scene.remove(this.loadingOverlayMesh)
-                            // Memory.releaseObject3D(this.loadingOverlayMesh)
-                            this.loadingOverlayMesh = null
-                        }
-                    })
-                    
-                    tl.to(this.loadingOverlayMesh.material.uniforms.uAlpha, {value: 0.0, ease: "power4.in", duration: 1})
-                })
+                // Forcer directement la transition vers l'écran d'entrée
+                this.completeLoading();
             },
-            
-            // Progress 
+
+            // Progress callback
             (itemUrl, itemsLoaded, itemsTotal) => {
-                if (this.loadingBarElement !== null) {
-                    const progressRatio = itemsLoaded / itemsTotal
-                    this.loadingBarElement.style.transform = `scaleX(${progressRatio})`
+                // Calculate the loading progress
+                const progressRatio = itemsLoaded / itemsTotal
+                const progressPercent = Math.floor(progressRatio * 100)
+
+                // Update the loading bar and percentage text
+                if (this.loadingBar) {
+                    this.loadingBar.style.transform = `scaleX(${progressRatio})`
+                }
+
+                if (this.loadingPercentage) {
+                    this.loadingPercentage.textContent = `${progressPercent}%`
+                }
+
+                console.log(`Loading progress: ${progressPercent}% (${itemsLoaded}/${itemsTotal})`)
+
+                // Si les modèles sont chargés mais que le manager ne se termine pas,
+                // forcer la transition après un délai
+                if (progressPercent >= 100) {
+                    setTimeout(() => {
+                        if (this.loadingScreen && !this.loadingScreen.classList.contains('ended')) {
+                            console.log('Forcing loading completion after timeout');
+                            this.completeLoading();
+                        }
+                    }, 2000);
+                }
+            },
+
+            // Error callback
+            (url, itemsLoaded, itemsTotal) => {
+                console.error('Error loading asset:', url);
+
+                // En cas d'erreur, afficher quand même l'écran d'entrée
+                // après un délai raisonnable
+                if (itemsLoaded === itemsTotal - 1) {
+                    setTimeout(() => {
+                        this.completeLoading();
+                    }, 3000);
                 }
             }
         )
+
+        this.loaders.texture = new THREE.TextureLoader(this.loadingManager)
+        this.loaders.exr = new EXRLoader(this.loadingManager)
+        this.loaders.hdr = new RGBELoader(this.loadingManager)
+        this.loaders.fbx = new FBXLoader(this.loadingManager)
+        this.loaders.gltf = new GLTFLoader(this.loadingManager)
+    }
+
+    // Méthode dédiée pour finaliser le chargement et passer à l'écran d'entrée
+    completeLoading() {
+        if (this.loadingScreen) {
+            this.loadingScreen.classList.add('ended');
+
+            // Assurer que l'écran de chargement est masqué même si la transition CSS échoue
+            setTimeout(() => {
+                if (this.loadingScreen) {
+                    this.loadingScreen.style.display = 'none';
+                }
+
+                if (this.entranceOverlay) {
+                    this.entranceOverlay.style.display = 'flex';
+                }
+
+                // Déclencher l'événement ready pour initialiser la scène
+                this.trigger('ready');
+            }, 1000);
+        } else {
+            // Si l'écran de chargement n'existe pas, afficher directement l'entrée
+            if (this.entranceOverlay) {
+                this.entranceOverlay.style.display = 'flex';
+            }
+
+            this.trigger('ready');
+        }
+    }
+
+    initLoadingScreen() {
+        this.loadingScreen = document.querySelector('.loading-screen')
+        this.loadingBar = document.querySelector('.loading-bar')
+        this.loadingPercentage = document.querySelector('.loading-percentage')
+        this.entranceOverlay = document.getElementById('entrance-overlay')
+
+        if (!this.loadingScreen || !this.loadingBar || !this.loadingPercentage) {
+            console.error('Loading screen elements not found in the DOM')
+        }
+
+        // Show loading screen, hide entrance overlay initially
+        if (this.loadingScreen) {
+            this.loadingScreen.style.opacity = '1'
+        }
+
+        if (this.entranceOverlay) {
+            this.entranceOverlay.style.display = 'none'
+        }
     }
 
     load() {
         if (this.assets.length === 0) {
-            this.trigger('ready')
-            return
+            // Si pas d'assets, passer directement à l'écran d'entrée
+            setTimeout(() => {
+                this.completeLoading();
+            }, 1000);
+            return;
         }
+
+        // Ajouter un délai de sécurité pour éviter un loader bloqué indéfiniment
+        setTimeout(() => {
+            if (!this.loadingComplete) {
+                console.warn('Loading timeout reached, forcing completion');
+                this.completeLoading();
+            }
+        }, 30000); // 30 secondes max pour le chargement
 
         for (const asset of this.assets) {
             if (asset.type.toLowerCase() === "texture") {
@@ -133,6 +190,9 @@ export class AssetManager extends EventEmitter {
                         texture.mapping = THREE.EquirectangularReflectionMapping
                     }
                     this.loadComplete(asset, texture)
+                }, undefined, error => {
+                    console.error(`Error loading texture ${asset.name}:`, error);
+                    this.loadComplete(asset, null); // Considérer comme chargé même en cas d'erreur
                 })
             }
             else
@@ -140,6 +200,9 @@ export class AssetManager extends EventEmitter {
                 this.loaders.exr.load(asset.path, (texture) => {
                     texture.mapping = THREE.EquirectangularReflectionMapping
                     this.loadComplete(asset, texture)
+                }, undefined, error => {
+                    console.error(`Error loading EXR ${asset.name}:`, error);
+                    this.loadComplete(asset, null);
                 })
             }
             else
@@ -147,18 +210,27 @@ export class AssetManager extends EventEmitter {
                 this.loaders.hdr.load(asset.path, (texture) => {
                     texture.mapping = THREE.EquirectangularReflectionMapping
                     this.loadComplete(asset, texture)
+                }, undefined, error => {
+                    console.error(`Error loading HDR ${asset.name}:`, error);
+                    this.loadComplete(asset, null);
                 })
             }
             else
             if (asset.type.toLowerCase() === "fbx") {
                 this.loaders.fbx.load(asset.path, (model) => {
                     this.loadComplete(asset, model)
+                }, undefined, error => {
+                    console.error(`Error loading FBX ${asset.name}:`, error);
+                    this.loadComplete(asset, null);
                 })
             }
             else
             if (asset.type.toLowerCase() === "gltf") {
                 this.loaders.gltf.load(asset.path, (model) => {
                     this.loadComplete(asset, model)
+                }, undefined, error => {
+                    console.error(`Error loading GLTF ${asset.name}:`, error);
+                    this.loadComplete(asset, null);
                 })
             }
             else
@@ -167,23 +239,29 @@ export class AssetManager extends EventEmitter {
                 const material = Object.assign(asset.textures)
 
                 let nTex = textures.length
-                let path = asset.path 
+                let path = asset.path
                 if (path.charAt(path.length - 1) !== '/') {
                     path += '/'
                 }
-              
+
                 textures.map((texObject, idx) => {
                     const type = texObject[0]
-                    
+
                     if (typeof texObject[1] === 'object' && !Array.isArray(texObject[1]) && texObject[1] !== null) {
-                        for (const [key, value] of Object.entries(texObject[1])) {                            
+                        for (const [key, value] of Object.entries(texObject[1])) {
                             const url = path + value
 
                             this.loaders.texture.load(url, (texture) => {
                                 texture.flipY = false
                                 material[type][key] = texture
-                                if (--nTex == 0) {
+                                if (--nTex === 0) {
                                     this.loadComplete(asset, material)
+                                }
+                            }, undefined, error => {
+                                console.error(`Error loading material texture ${asset.name}:`, error);
+                                material[type][key] = null;
+                                if (--nTex === 0) {
+                                    this.loadComplete(asset, material);
                                 }
                             })
                         }
@@ -193,10 +271,16 @@ export class AssetManager extends EventEmitter {
                         this.loaders.texture.load(url, (texture) => {
                             texture.flipY = false
                             material[type] = texture
-                            if (--nTex == 0) {
+                            if (--nTex === 0) {
                                 this.loadComplete(asset, material)
                             }
-                        })    
+                        }, undefined, error => {
+                            console.error(`Error loading material texture ${asset.name}:`, error);
+                            material[type] = null;
+                            if (--nTex === 0) {
+                                this.loadComplete(asset, material);
+                            }
+                        })
                     }
                 })
             }
@@ -206,7 +290,6 @@ export class AssetManager extends EventEmitter {
     loadComplete(asset, object) {
         console.log(`AssetManager :: new item stored : ${asset.name}`)
         this.items[asset.name] = object
-
     }
 
     getItemNamesOfType(type) {
@@ -214,11 +297,17 @@ export class AssetManager extends EventEmitter {
     }
 
     getItem(name) {
+        // Vérifier si l'élément existe
+        if (!this.items[name]) {
+            console.warn(`Asset not found: ${name}`);
+            return null;
+        }
+
         // Check if it's a gltf material
         if (this.items[name].scene
             && this.items[name].scene.getObjectByName('pbr_node')
             && this.items[name].scene.getObjectByName('pbr_node').material) {
-                return this.items[name].scene.getObjectByName('pbr_node').material
+            return this.items[name].scene.getObjectByName('pbr_node').material
         }
 
         return this.items[name]
@@ -227,15 +316,25 @@ export class AssetManager extends EventEmitter {
     destroy() {
         this.assets = null
 
-        this.loadingBarElement = null
+        this.loadingScreen = null
+        this.loadingBar = null
+        this.loadingPercentage = null
+        this.entranceOverlay = null
+
         this.loadingManager = null
 
-        this.loaders.model = null
-        this.loaders.texture = null
-        this.loaders = null
+        if (this.loaders) {
+            this.loaders.texture = null
+            this.loaders.exr = null
+            this.loaders.hdr = null
+            this.loaders.fbx = null
+            this.loaders.gltf = null
+            this.loaders = null
+        }
 
-        this.items.length = 0
-        this.items = null
+        if (this.items) {
+            this.items = null
+        }
 
         this.app = null
     }
